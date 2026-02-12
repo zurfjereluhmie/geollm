@@ -318,6 +318,54 @@ EXAMPLES: list[ExampleQuery] = [
             original_query="Biking distance from Lake Geneva",
         ),
     ),
+    # Example 13: Time-based distance - 10 minute walk
+    ExampleQuery(
+        input="10 minutes walk from Zurich main railway station",
+        language="en",
+        description="Time-based distance '10 minutes walk' converted to 800m explicit distance",
+        output=GeoQuery(
+            query_type="simple",
+            spatial_relation=SpatialRelation(relation="near", category="buffer", explicit_distance=800),
+            reference_location=ReferenceLocation(
+                name="Zurich main railway station",
+                type="train_station",
+                type_confidence=0.95,
+                parent_context=None,
+            ),
+            buffer_config=BufferConfig(distance_m=800, buffer_from="center", ring_only=False, inferred=False),
+            confidence_breakdown=ConfidenceScore(
+                overall=0.90,
+                location_confidence=0.90,
+                relation_confidence=0.90,
+                reasoning="'10 minutes walk' converted to 800m buffer (5km/h walking speed).",
+            ),
+            original_query="10 minutes walk from Zurich main railway station",
+        ),
+    ),
+    # Example 14: Time-based distance - 15 minute bike ride
+    ExampleQuery(
+        input="15 minutes bike from Lake Geneva",
+        language="en",
+        description="Time-based distance '15 minutes bike' converted to 5000m explicit distance",
+        output=GeoQuery(
+            query_type="simple",
+            spatial_relation=SpatialRelation(relation="near", category="buffer", explicit_distance=5000),
+            reference_location=ReferenceLocation(
+                name="Lake Geneva",
+                type="lake",
+                type_confidence=0.95,
+                parent_context=None,
+            ),
+            buffer_config=BufferConfig(distance_m=5000, buffer_from="center", ring_only=False, inferred=False),
+            confidence_breakdown=ConfidenceScore(
+                overall=0.90,
+                location_confidence=0.90,
+                relation_confidence=0.90,
+                reasoning="'15 minutes bike' converted to 5000m buffer (20km/h biking speed).",
+            ),
+            original_query="15 minutes bike from Lake Geneva",
+        ),
+    ),
 ]
 
 

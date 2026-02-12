@@ -63,11 +63,16 @@ Location Disambiguation:
 - Use parent_context to help disambiguate when needed
 
 Distance Extraction:
-- Extract explicit distances when mentioned: "within 5km" → explicit_distance=5000
-- Convert to meters: "5km" → 5000, "500 meters" → 500, "2 miles" → 3219
-- Recognize contextual distances and convert to explicit values:
-  * "walking distance" → explicit_distance=1000 (typical 10-15 minute walk)
-  * "biking distance" / "cycling distance" → explicit_distance=5000 (typical 10-15 minute bike ride)
+- Extract explicit distances: "within 5km" → explicit_distance=5000
+- Convert units to meters: "5km" → 5000, "500 meters" → 500, "2 miles" → 3219
+- Recognize and calculate time-based distances using these speeds:
+  * Walking: 5 km/h
+  * Biking: 20 km/h
+- Examples:
+  * "10 minutes walk from X" → 10 * (5000/60) = 833m
+  * "15 minutes bike from X" → 15 * (20000/60) = 5000m
+  * "walking distance from X" → 1000m (typical walk)
+  * "biking distance from X" → 5000m (typical bike ride)
 - Leave null if not explicitly stated (defaults will be applied)
 
 Buffer Configuration:

@@ -177,41 +177,80 @@ The validation pipeline (`validators.py:12-76`) ensures correctness:
 
 #### Context-Dependent Distance Handling
 
-GeoLLM recognizes context-dependent distance expressions and converts them to explicit buffer distances:
+GeoLLM recognizes context-dependent distance expressions and converts them to explicit buffer distances using standard transportation speeds:
+
+**Speed Definitions:**
+- **Walking**: 5 km/h
+- **Biking**: 20 km/h
 
 **Supported Expressions:**
-- **Walking distance**: 1km (typical 10-15 minute walk)
-- **Biking/Cycling distance**: 5km (typical 10-15 minute bike ride)
+
+1. **Time-based distances**: "X minutes [walk|bike] from [location]"
+   - LLM calculates distance using speed formula: distance = minutes × (speed_km/h × 1000 / 60)
+   - Examples:
+     - "10 minutes walk from X" → 10 × (5000/60) ≈ 833m
+     - "15 minutes bike from X" → 15 × (20000/60) = 5000m
+
+2. **Contextual distances**: "[walking|biking] distance from [location]"
+   - Walking distance → 1000m
+   - Biking distance → 5000m
+
+3. **Explicit numeric distances**: "within 5km", "500 meters", "2 miles"
+   - Directly converted to meters
 
 **How It Works:**
 
-1. LLM recognizes contextual distance phrase in query
-2. Converts to explicit distance value via prompt guidance (`prompts.py:65-71`)
-3. Sets `explicit_distance` field (e.g., 1000 or 5000 meters)
+1. LLM recognizes distance expression (time-based, contextual, or numeric)
+2. Calculates explicit distance using speed definitions or contextual defaults
+3. Sets `explicit_distance` field with computed value
 4. Validation pipeline applies this as buffer distance (`validators.py:64-74`)
 5. `inferred=False` (treated as user-specified, not default)
 
-**Example:**
+**Examples:**
 ```python
-# Query: "Walking distance from Zurich main railway station"
+# Query: "10 minutes walk from Zurich"
 GeoQuery(
     spatial_relation=SpatialRelation(
         relation="near",
-        explicit_distance=1000  # ← Converted from "walking distance"
+        explicit_distance=833  # ← Computed: 10 min × (5 km/h / 60)
+    ),
+    buffer_config=BufferConfig(
+        distance_m=833,
+        inferred=False
+    )
+)
+
+# Query: "Walking distance from Zurich"
+GeoQuery(
+    spatial_relation=SpatialRelation(
+        relation="near",
+        explicit_distance=1000  # ← Contextual default
     ),
     buffer_config=BufferConfig(
         distance_m=1000,
-        inferred=False  # ← Treated as user-specified
+        inferred=False
+    )
+)
+
+# Query: "15 minutes bike from Bern"
+GeoQuery(
+    spatial_relation=SpatialRelation(
+        relation="near",
+        explicit_distance=5000  # ← Computed: 15 min × (20 km/h / 60)
+    ),
+    buffer_config=BufferConfig(
+        distance_m=5000,
+        inferred=False
     )
 )
 ```
 
 **Implementation:**
-- **Prompt guidance**: System prompt includes explicit instructions to recognize and convert these phrases
-- **Few-shot examples**: Examples 11-12 in `examples.py` demonstrate the expected behavior
+- **Prompt guidance**: System prompt defines speeds and calculation formula (`prompts.py:65-76`)
+- **Few-shot examples**: Examples 11-12 in `examples.py` demonstrate expected behavior
 - **Validation**: Standard pipeline handles converted distances like explicit user-specified values
 
-**Extension Point**: Future support for additional contextual distances (e.g., "driving distance", time-based like "30 minute walk") can be added by extending the prompt template and few-shot examples.
+**Extension Point**: Future support for additional modes or time formats (hours, seconds) can be added by extending speed definitions in the prompt template.
 
 ### 3. Data Models (Pydantic v2)
 
