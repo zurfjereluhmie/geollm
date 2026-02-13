@@ -188,3 +188,34 @@ def test_real_search_lake(real_source):
         # Should be Polygon or MultiPolygon
         geom_types = {r["geometry"]["type"] for r in results}
         assert "Polygon" in geom_types or "MultiPolygon" in geom_types
+
+
+def test_fuzzy_search_partial_name(real_source):
+    """Test fuzzy matching for partial river names (e.g., 'Venoge' matching 'La Venoge')."""
+    # Search for "Venoge" without "La" should still match "La Venoge" via fuzzy matching
+    results = real_source.search("Venoge", type="river")
+    assert len(results) > 0, "Should find 'La Venoge' when searching for 'Venoge'"
+    names = [r["properties"]["name"] for r in results]
+    assert any("Venoge" in name for name in names), f"Expected name containing 'Venoge' in {names}"
+
+
+def test_fuzzy_search_case_insensitive_partial(real_source):
+    """Test fuzzy matching is case-insensitive for partial names."""
+    results = real_source.search("venoge", type="river")
+    assert len(results) > 0, "Should find 'La Venoge' when searching for lowercase 'venoge'"
+    names = [r["properties"]["name"] for r in results]
+    assert any("Venoge" in name for name in names), f"Expected name containing 'Venoge' in {names}"
+
+
+def test_fuzzy_search_with_type_filter(real_source):
+    """Test that fuzzy search results can be filtered by type."""
+    # Without type filter, should get multiple results of different types
+    all_results = real_source.search("Venoge")
+    river_results = real_source.search("Venoge", type="river")
+
+    # River results should be a subset of all results
+    assert len(river_results) <= len(all_results)
+
+    # River results should only contain rivers
+    for result in river_results:
+        assert result["properties"]["type"] == "river", f"Expected type 'river', got {result['properties']['type']}"

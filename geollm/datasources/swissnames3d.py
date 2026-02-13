@@ -13,6 +13,7 @@ from typing import Any
 
 import geopandas as gpd
 import pyproj
+from rapidfuzz import fuzz
 from shapely.geometry import mapping
 
 # CH1903+ (LV95) to WGS84 transformer - data is assumed to always be in EPSG:2056
@@ -343,7 +344,9 @@ class SwissNames3DSource:
         """
         Search for geographic features by name.
 
-        Uses case-insensitive, accent-normalized matching.
+        Uses case-insensitive, accent-normalized matching with fuzzy fallback.
+        First tries exact matching, then falls back to fuzzy matching if no exact
+        matches found.
 
         Args:
             name: Location name to search for.
@@ -360,9 +363,9 @@ class SwissNames3DSource:
         normalized = _normalize_name(name)
         indices = self._name_index.get(normalized, [])
 
+        # If no exact match, try fuzzy matching
         if not indices:
-            # FIXME: add fuzzy matching (rapidfuzz) for misspelled locations
-            return []
+            indices = self._fuzzy_search(normalized)
 
         features = [self._row_to_feature(idx) for idx in indices]
 
@@ -372,6 +375,42 @@ class SwissNames3DSource:
             features = [f for f in features if f["properties"].get("type") == normalized_type]
 
         return features[:max_results]
+
+    def _fuzzy_search(self, normalized: str, threshold: float = 75.0) -> list[int]:
+        """
+        Fuzzy search for names that partially match the search query.
+
+        Uses token matching to find results where at least one token from the
+        query matches a token in the indexed name. This handles cases like:
+        - "venoge" matching "la venoge"
+        - "rhone" matching "rhone valais"
+
+        Args:
+            normalized: The normalized search query.
+            threshold: Minimum fuzzy match score (0-100) to include a result.
+
+        Returns:
+            List of row indices for fuzzy-matched names, sorted by score (descending).
+        """
+        matches: list[tuple[int, float]] = []
+        query_tokens = set(normalized.split())
+
+        for indexed_name, indices in self._name_index.items():
+            indexed_tokens = set(indexed_name.split())
+
+            # Check if any query token matches any indexed token
+            token_overlap = query_tokens & indexed_tokens
+
+            if token_overlap:
+                # Also use token_set_ratio for better matching of partial strings
+                score = fuzz.token_set_ratio(normalized, indexed_name)
+                if score >= threshold:
+                    for idx in indices:
+                        matches.append((idx, score))
+
+        # Sort by score (descending) to return best matches first
+        matches.sort(key=lambda x: x[1], reverse=True)
+        return [idx for idx, _ in matches]
 
     def get_by_id(self, feature_id: str) -> dict[str, Any] | None:
         """
