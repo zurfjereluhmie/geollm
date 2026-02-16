@@ -48,9 +48,9 @@ Spatial Relations:
 Location Type and Confidence:
 - type is OPTIONAL and should be used as a HINT, not a strict requirement
 - Set type when explicitly mentioned or strongly implied: "Lake Geneva" → type="lake", type_confidence=0.95
-- For ambiguous cases, set low confidence or omit type entirely:
-  * "Bern" could be city OR canton → type="city", type_confidence=0.5
-  * "Orbe" could be city OR river → type="city", type_confidence=0.5
+- For ambiguous cases, set low confidence and omit type:
+  * "Bern" could be city OR canton → type_confidence=0.5
+  * "Neuchâtel" could be city, a lake or a canton → type_confidence=0.5
 - Use spatial relation as a hint for type:
   * "along X" suggests linear features (river, road, path) → moderate confidence
   * "in X" suggests areas (city, region, country) → moderate confidence
